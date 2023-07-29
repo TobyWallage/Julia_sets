@@ -113,7 +113,7 @@ fn julia(z: Complex<f64>, c: &Complex<f64>, max_iterations: &u32, max_r: &f64) -
     let mut z = z.clone();
 
     for iteration in 0..*max_iterations {
-        if {z.re*z.re + z.im*z.im} > *max_r {
+        if {z.re*z.re + z.im*z.im} > *max_r * *max_r {
             break;
         }
         z = z * z + c;
