@@ -8,7 +8,7 @@ use std::time;
 fn main() {
     let now = time::Instant::now();
     // Define size of image
-    let (width, height): (u32, u32) = (10000, 5000);
+    let (width, height): (u32, u32) = (20000, 10000);
     // Scale is sort of like the reciprocol of a Zooming into the fractal, Smaller values = More Zoomed in
     let scale = 2.0;
     // Calculate the aspect ratio so final image does not look stretched etc.
