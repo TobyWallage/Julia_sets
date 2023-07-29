@@ -1,12 +1,13 @@
 use image::{ImageBuffer, Rgb};
 use num::complex::Complex;
 use std::cmp::Ordering;
-use std::sync::mpsc::channel;
-use std::thread;
-use threadpool::ThreadPool;
+use std::time;
+
 
 fn main() {
-    let (width, height):(u32, u32) = (10000, 5000);
+    let now = time::Instant::now();
+
+    let (width, height):(u32, u32) = (20000,10000);
     let scale = 2.0;
     let (x_aspect, y_aspect):(f64, f64) = get_aspects(width, height, scale);
 
@@ -20,8 +21,6 @@ fn main() {
     let c = Complex::new(-0.74543,  0.11301);
     let max_iteration = 500;
     
-    let num_cores:u32 = thread::available_parallelism().unwrap().get() as u32;
-    println!("{}", num_cores);
 
     for (x, y, pixel) in image_buffer.enumerate_pixels_mut(){
         let julia_val = calc_julia_val(x, scalex, x_aspect, y, scaley, y_aspect, c, &max_iteration);
@@ -31,6 +30,9 @@ fn main() {
     };
 
     image_buffer.save("Julia_fractal.png").unwrap();
+
+    let elapsed = now.elapsed();
+    println!("Time taken: {:.2?}", elapsed);
 
 }
 
@@ -49,7 +51,7 @@ fn julia(z: Complex<f64>, c: &Complex<f64>, max_iterations: &u32, max_r: &f64) -
     let mut z = z.clone();
 
     for iteration in 0..*max_iterations{
-        if z.norm() > *max_r{
+        if {z.re*z.re + z.im*z.im} > *max_r{
             break;
         }
         z = z * z + c;
