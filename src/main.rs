@@ -1,33 +1,46 @@
 use image::{ImageBuffer, Rgb};
 use num::complex::Complex;
 use std::cmp::Ordering;
-// use rayon::prelude::*;
+use std::sync::mpsc::channel;
+use std::thread;
+use threadpool::ThreadPool;
 
 fn main() {
-    let (width, height):(u32, u32) = (40000, 20000);
+    let (width, height):(u32, u32) = (10000, 5000);
     let scale = 2.0;
     let (x_aspect, y_aspect):(f64, f64) = get_aspects(width, height, scale);
 
     let scalex = x_aspect/width as f64;
     let scaley = y_aspect/height as f64;
 
+    
     let mut image_buffer = ImageBuffer::new(width, height);
     
+    
     let c = Complex::new(-0.74543,  0.11301);
+    let max_iteration = 500;
+    
+    let num_cores:u32 = thread::available_parallelism().unwrap().get() as u32;
+    println!("{}", num_cores);
 
     for (x, y, pixel) in image_buffer.enumerate_pixels_mut(){
-        let z = Complex::new(
-            (x as f64 * scalex) - x_aspect/2.0,
-            (y as f64 * scaley) - y_aspect/2.0
-        );
+        let julia_val = calc_julia_val(x, scalex, x_aspect, y, scaley, y_aspect, c, &max_iteration);
+        let julia_val = ((julia_val as f64/max_iteration as f64) * 255.0) as u8;
 
-        let mut julia_val = julia(z, &c, &510, &2.0);
-        julia_val = julia_val/2;
         *pixel = Rgb([(0.4*julia_val as f64) as u8,(0.7*julia_val as f64) as u8, (1.0*julia_val as f64) as u8]);
     };
 
     image_buffer.save("Julia_fractal.png").unwrap();
 
+}
+
+fn calc_julia_val(x: u32, scalex: f64, x_aspect: f64, y: u32, scaley: f64, y_aspect: f64, c: Complex<f64>, max_iterations: &u32) -> u32 {
+    let z = Complex::new(
+        (x as f64 * scalex) - x_aspect/2.0,
+        (y as f64 * scaley) - y_aspect/2.0
+    );
+    let julia_val = julia(z, &c, &max_iterations, &2.0);
+    return julia_val;
 }
 
 fn julia(z: Complex<f64>, c: &Complex<f64>, max_iterations: &u32, max_r: &f64) -> u32 {
