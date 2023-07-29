@@ -4,10 +4,11 @@ use std::cmp::Ordering; // for match statement when getting aspect ratio
 use std::sync::mpsc::channel; // for Send and Receive Channels between threads
 use std::thread; // for getting number of available threads
 use threadpool::ThreadPool; // for threadpool to compute julia values in parrallel
-
+use std::time;
 fn main() {
+    let now = time::Instant::now();
     // Define size of image
-    let (width, height): (u32, u32) = (40000, 20000);
+    let (width, height): (u32, u32) = (10000, 5000);
     // Scale is sort of like the reciprocol of a Zooming into the fractal, Smaller values = More Zoomed in
     let scale = 2.0;
     // Calculate the aspect ratio so final image does not look stretched etc.
@@ -75,6 +76,9 @@ fn main() {
     }
     // save the image to directory for the binary was called from
     image_buffer.save("Julia_fractal.png").unwrap();
+
+    let elapsed = now.elapsed();
+    println!("Time taken: {:.2?}", elapsed);
 }
 
 /// light wrapper around actual julia iterator function
@@ -109,7 +113,7 @@ fn julia(z: Complex<f64>, c: &Complex<f64>, max_iterations: &u32, max_r: &f64) -
     let mut z = z.clone();
 
     for iteration in 0..*max_iterations {
-        if z.norm() > *max_r {
+        if {z.re*z.re + z.im*z.im} > *max_r {
             break;
         }
         z = z * z + c;
