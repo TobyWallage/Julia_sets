@@ -6,7 +6,7 @@ use std::thread;
 use threadpool::ThreadPool;
 
 fn main() {
-    let (width, height):(u32, u32) = (10000, 5000);
+    let (width, height):(u32, u32) = (40000, 20000);
     let scale = 2.0;
     let (x_aspect, y_aspect):(f64, f64) = get_aspects(width, height, scale);
 
@@ -14,27 +14,40 @@ fn main() {
     let scaley = y_aspect/height as f64;
 
     
-    let mut image_buffer = ImageBuffer::new(width, height);
+    let mut image_buffer: ImageBuffer<Rgb<u8>, Vec<_>> = ImageBuffer::new(width, height);
     
     
     let c = Complex::new(-0.74543,  0.11301);
     let max_iteration = 500;
     
-    let num_cores:u32 = thread::available_parallelism().unwrap().get() as u32;
+    let num_cores = thread::available_parallelism().unwrap().get();
     println!("{}", num_cores);
 
-    for (x, y, pixel) in image_buffer.enumerate_pixels_mut(){
-        let julia_val = calc_julia_val(x, scalex, x_aspect, y, scaley, y_aspect, c, &max_iteration);
-        let julia_val = ((julia_val as f64/max_iteration as f64) * 255.0) as u8;
+    let pool = ThreadPool::new(num_cores);
 
-        *pixel = Rgb([(0.4*julia_val as f64) as u8,(0.7*julia_val as f64) as u8, (1.0*julia_val as f64) as u8]);
-    };
+    let (sender, receiver) = channel::<(u32, u32, u32)>();
+
+    for y in 0..height{
+        let sender = sender.clone();
+
+        pool.execute(move || for x in 0..width {
+            let julia_val = calc_julia_val(x, scalex, x_aspect, y, scaley, y_aspect, c, max_iteration);
+            let julia_val = ((julia_val as f64/max_iteration as f64) * 255.0) as u32;
+            sender.send((x, y, julia_val)).unwrap();
+        })
+    }
+
+    for _ in 0..(width*height){
+        let (x, y, julia_val) = receiver.recv().unwrap_or((0, 0, 0));
+        let pixel = Rgb([(0.4*julia_val as f64) as u8,(0.7*julia_val as f64) as u8, (1.0*julia_val as f64) as u8]);
+        image_buffer.put_pixel(x, y, pixel);
+    }
 
     image_buffer.save("Julia_fractal.png").unwrap();
 
 }
 
-fn calc_julia_val(x: u32, scalex: f64, x_aspect: f64, y: u32, scaley: f64, y_aspect: f64, c: Complex<f64>, max_iterations: &u32) -> u32 {
+fn calc_julia_val(x: u32, scalex: f64, x_aspect: f64, y: u32, scaley: f64, y_aspect: f64, c: Complex<f64>, max_iterations: u32) -> u32 {
     let z = Complex::new(
         (x as f64 * scalex) - x_aspect/2.0,
         (y as f64 * scaley) - y_aspect/2.0
