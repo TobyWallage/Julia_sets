@@ -28,7 +28,7 @@ fn main() {
 
     // Max number of iterations to perform when calulcating pixel value
     // This is will also control how bright the final image fractal may appear
-    let max_iteration = 500;
+    let max_iteration = 1000;
 
     // Get number of threads available for multithreading
     let num_cores = thread::available_parallelism().unwrap().get();
@@ -73,13 +73,37 @@ fn main() {
         // compute RGB pixel value
         for (x, julia_val) in row_values.iter().enumerate(){
 
+            let julia_val = *julia_val;
             let x = x as u32;
 
-            let pixel = Rgb([
-                (0.4 * *julia_val as f64) as u8,
-                (0.7 * *julia_val as f64) as u8,
-                (1.0 * *julia_val as f64) as u8,
-            ]);
+            // let pixel = match julia_val{
+            //     (0..=50) => {Rgb([(255.0 - 0.1 * julia_val as f64) as u8,
+            //         (120.0 - 0.1 * julia_val as f64) as u8,
+            //         (100.0 - 0.1 * julia_val as f64) as u8,])},
+            //     (51..=100) => {Rgb([(1.0 * julia_val as f64) as u8,
+            //         (0.3 * julia_val as f64) as u8,
+            //         (0.7 * julia_val as f64) as u8,])},
+            //     (101..=150) => {Rgb([(0.9 * julia_val as f64) as u8,
+            //         (0.4 * julia_val as f64) as u8,
+            //         (0.9 * julia_val as f64) as u8,])},
+            //     (151..=200) => {Rgb([(0.7 * julia_val as f64) as u8,
+            //         (0.3 * julia_val as f64) as u8,
+            //         (0.9 * julia_val as f64) as u8,])},
+            //     (201..=253) => {Rgb([(0.3 * julia_val as f64) as u8,
+            //         (0.2 * julia_val as f64) as u8,
+            //         (0.8 * julia_val as f64) as u8,])},
+            //     (254..) => {Rgb([(0.1 * julia_val as f64) as u8,
+            //         (0.1 * julia_val as f64) as u8,
+            //         (0.2 * julia_val as f64) as u8,])}
+            // };
+
+            // let pixel = Rgb([
+            //     (1.0 * julia_val as f64) as u8,
+            //     (0.5 * julia_val as f64) as u8,
+            //     (0.8 * julia_val as f64) as u8,
+            // ]);
+            
+            let pixel = colormap(julia_val);
             // place pixel in image
             image_buffer.put_pixel(x, y, pixel);
         }
@@ -140,4 +164,42 @@ fn get_aspects(width: u32, height: u32, scale: f64) -> (f64, f64) {
         Ordering::Greater => return (scale * aspect_ratio, scale),
         Ordering::Less => return (scale, scale * aspect_ratio),
     }
+}
+
+fn colormap(val:u32)-> Rgb<u8>{ 
+    let colour_one:(u8, u8, u8) = (76, 201, 240);
+    let colour_two:(u8, u8, u8) = (67, 97, 238);
+    let colour_three:(u8, u8, u8) = ( 58, 12, 163);
+    let colour_four:(u8, u8, u8) = (114, 9, 183);
+    let colour_five:(u8, u8, u8) = (247, 37, 133);
+
+    match val {
+        (0..=63) => return Rgb([
+            interpolate(val as f32 / 63.0, colour_one.0, colour_two.0),
+            interpolate(val as f32 / 63.0, colour_one.1, colour_two.1),
+            interpolate(val as f32 / 63.0, colour_one.2, colour_two.2),
+        ]),
+        (64..=126) => return Rgb([
+            interpolate((val-64) as f32 / 63.0, colour_two.0, colour_three.0),
+            interpolate((val-64) as f32 / 63.0, colour_two.1, colour_three.1),
+            interpolate((val-64) as f32 / 63.0, colour_two.2, colour_three.2),
+        ]),
+        (127..=189) => return Rgb([
+            interpolate((val-127) as f32 / 63.0, colour_three.0, colour_four.0),
+            interpolate((val-127) as f32 / 63.0, colour_three.1, colour_four.1),
+            interpolate((val-127) as f32 / 63.0, colour_three.2, colour_four.2),
+        ]),
+        (190..=253) => return Rgb([
+            interpolate((val-190) as f32 / 63.0, colour_four.0, colour_five.0),
+            interpolate((val-190) as f32 / 63.0, colour_four.1, colour_five.1),
+            interpolate((val-190) as f32 / 63.0, colour_four.2, colour_five.2),
+        ]),
+        (254..) => return Rgb([colour_five.0, colour_five.1, colour_five.2])
+    }
+}
+
+fn interpolate(val:f32, val_one:u8, val_two:u8) -> u8{
+    let val_dif = val_two as f32 - val_one as f32;
+    let interped_val = val_one as f32 + (val_dif * val);
+    return interped_val as u8;
 }
