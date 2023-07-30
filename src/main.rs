@@ -8,7 +8,7 @@ use std::time;
 fn main() {
     let now = time::Instant::now();
     // Define size of image
-    let (width, height): (u32, u32) = (20000, 10000);
+    let (width, height): (u32, u32) = (40000, 20000);
     // Scale is sort of like the reciprocol of a Zooming into the fractal, Smaller values = More Zoomed in
     let scale = 2.0;
     // Calculate the aspect ratio so final image does not look stretched etc.
@@ -38,7 +38,7 @@ fn main() {
     let pool = ThreadPool::new(num_cores);
 
     // Create Send and Receive Channel for sending computed values from each thread
-    let (sender, receiver) = channel::<(u32, u32, u32)>();
+    let (sender, receiver) = channel::<(u32, Vec<u32>)>();
 
     // Iterate through height of image, creating new thread for each row
     for y in 0..height {
@@ -49,30 +49,40 @@ fn main() {
         // move, moves all required values for closure (lambda function) to the thread
         // Closure (lambda function) iterates through every x value on the current row computing the value
         pool.execute(move || {
+            let mut row_values = vec![0 as u32; width as usize];
+
             for x in 0..width {
                 let julia_val =
                     calc_julia_val(x, scalex, x_aspect, y, scaley, y_aspect, c, max_iteration);
                 // normalize the value from 0 to 255 for pixel value
                 let julia_val = ((julia_val as f64 / max_iteration as f64) * 255.0) as u32;
+
+                row_values[x as usize] = julia_val;
                 // Send the computed pixel value and the coresponding x and y values
-                sender.send((x, y, julia_val)).unwrap();
+                // sender.send((x, y, julia_val)).unwrap();
             }
+            sender.send((y, row_values)).unwrap();
         })
     }
 
     // loop for every pixel in the image,
     // Recieve the values from the thread and place in in the correct coordinate inside the image
-    for _ in 0..(width * height) {
+    for _ in 0..height {
         // retrieve value and coordinate or if it fails for some reason, uses (x = 0, y = 0,pixl = 0)
-        let (x, y, julia_val) = receiver.recv().unwrap_or((0, 0, 0));
+        let (y, row_values) = receiver.recv().unwrap_or((0, vec![0 as u32; width as usize]));
         // compute RGB pixel value
-        let pixel = Rgb([
-            (0.4 * julia_val as f64) as u8,
-            (0.7 * julia_val as f64) as u8,
-            (1.0 * julia_val as f64) as u8,
-        ]);
-        // place pixel in image
-        image_buffer.put_pixel(x, y, pixel);
+        for (x, julia_val) in row_values.iter().enumerate(){
+
+            let x = x as u32;
+
+            let pixel = Rgb([
+                (0.4 * *julia_val as f64) as u8,
+                (0.7 * *julia_val as f64) as u8,
+                (1.0 * *julia_val as f64) as u8,
+            ]);
+            // place pixel in image
+            image_buffer.put_pixel(x, y, pixel);
+        }
     }
     // save the image to directory for the binary was called from
     image_buffer.save("Julia_fractal.png").unwrap();

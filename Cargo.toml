@@ -11,4 +11,5 @@ num = "0.4.1"
 threadpool = "1.8.1"
 
 [profile.release]
-debug = true
+debug = false
+opt-level = 3
