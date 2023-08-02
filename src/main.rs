@@ -18,7 +18,7 @@ use std::io::ErrorKind;
 
 fn main() -> Result<(), Box<dyn Error>> {
     
-    let file_path = Path::new("/home/toby/images/fractal_image.png");
+    let file_path = Path::new("new_fractal_image.png");
     
     // Size of the image
     let (width, height) = (7680,4320);
