@@ -4,6 +4,8 @@ use num::complex::Complex; // for handing complex numbers
 
 use threadpool::ThreadPool; // for threadpool to compute julia values in parrallel
 
+use clap::Parser;
+
 use std::cmp::Ordering; // for match statement when getting aspect ratio
 use std::error::Error;
 use std::fs::DirBuilder;
@@ -17,18 +19,11 @@ use std::io::ErrorKind;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
+
+    let fractal_args = Args::parse();
+
     
-    let file_path = Path::new("new_fractal_image.png");
-    
-    // Size of the image
-    let (width, height) = (7680,4320);
-    
-    // / Scale is sort of like the reciprocol of a Zooming into the fractal, Smaller values = More Zoomed in
-    let scale = 2.0;
-    
-    // Max number of iterations to perform when calulcating pixel value
-    // This is will also control how bright the final image fractal may appear
-    let max_interations = 1000;
+    let file_path = Path::new(&fractal_args.file_path);
     
     // check that file path is valid
     match file_path.parent() {
@@ -47,11 +42,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         },
         None => return Err(Box::new(IOError::new(ErrorKind::InvalidInput, "Wrong file type, must end in .png")))
     };
+
+    // Size of the image
+    let (width, height) = (fractal_args.width,fractal_args.height);
+    
+    // Scale is sort of like the reciprocol of a Zooming into the fractal, Smaller values = More Zoomed in
+    let scale = fractal_args.scale;
+    
+    // Max number of iterations to perform when calulcating pixel value
+    // This is will also control how bright the final image fractal may appear
+    let max_interations = fractal_args.max_interations;
+    
     
     // Define Complex Seed that determines the fractal from the Julia set,
     // This should have an absolute value less than (R^2 - R), currently R is hardcoded as R=2
     // Therefore the absolute value of c Should be less than 2
-    let c = Complex::new(-0.74543, 0.11301);
+    let c = fractal_args.fractal_seed;
     
     let now = time::Instant::now();
 
@@ -68,6 +74,38 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Time taken: {:.2?}", elapsed);
 
     Ok(())
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+
+    /// File where fractal image will be saved
+    #[arg(short, long, default_value_t = String::from("Fractal_image.png"))]
+    file_path: String,
+
+    /// Width of the image in pixels
+    #[arg(short, long, default_value_t = 512)]
+    width: u32,
+
+    /// Height of the image in pixels
+    #[arg(short, long, default_value_t = 512)]
+    height: u32,
+
+    /// Scale is sort of like the reciprocol of a Zooming into the fractal, Smaller values = More Zoomed in
+    #[arg(short, long, default_value_t = 2.0)]
+    scale: f64,
+
+    /// Max number of iterations to perform when calulcating pixel value.
+    /// This is will also control how bright the final image fractal may appear
+    #[arg(short, long, default_value_t = 300)]
+    max_interations: u32,
+
+    /// Define Complex Seed that determines the fractal from the Julia set.
+    /// This should have an absolute value less than (R^2 - R), currently R is hardcoded as R=2.
+    /// Therefore the absolute value of seed should be less than 2
+    #[arg(short, long, default_value_t = Complex::new(-0.74543, 0.11301))]
+    fractal_seed : Complex<f64>,
 }
 
 fn make_fractal_image(
