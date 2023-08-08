@@ -9,7 +9,7 @@ name = "py_fractal"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = {version = "0.19", features = ["extension-module", "num-complex"]}
+pyo3 = {version = "0.19", features = ["extension-module", "num-complex", "generate-import-lib"]}
 numpy = "0.19"
 num = "0.4.1"
 threadpool = "1.8.1"
